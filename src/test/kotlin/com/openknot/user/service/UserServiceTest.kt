@@ -1,19 +1,24 @@
 package com.openknot.user.service
 
+import com.openknot.user.dto.UpdateUserRequest
 import com.openknot.user.entity.User
 import com.openknot.user.exception.BusinessException
 import com.openknot.user.exception.ErrorCode
 import com.openknot.user.repository.UserRepository
+import kotlinx.coroutines.flow.flowOf
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.springframework.data.domain.PageRequest
 import java.time.LocalDateTime
 import java.util.*
 
@@ -58,7 +63,7 @@ class UserServiceTest {
         coEvery { userRepository.findById(userId) } returns expectedUser
 
         // when: getUserById 메서드를 호출할 때
-        val result = userService.getUserById(userId)
+        val result = userService.getUser(userId)
 
         // then: 올바른 User 엔티티가 반환되어야 한다
         result shouldNotBe null
@@ -83,7 +88,7 @@ class UserServiceTest {
 
         // when & then: getUserById 호출 시 BusinessException이 발생해야 한다
         val exception = shouldThrow<BusinessException> {
-            userService.getUserById(nonExistingUserId)
+            userService.getUser(nonExistingUserId)
         }
 
         // then: 예외의 에러 코드가 USER_NOT_FOUND여야 한다
@@ -113,7 +118,7 @@ class UserServiceTest {
         coEvery { userRepository.findById(userId) } returns userWithNullFields
 
         // when: getUserById 메서드를 호출할 때
-        val result = userService.getUserById(userId)
+        val result = userService.getUser(userId)
 
         // then: null 필드를 포함한 User 엔티티가 정상적으로 반환되어야 한다
         result shouldNotBe null
@@ -146,7 +151,7 @@ class UserServiceTest {
         coEvery { userRepository.findById(userId) } returns deletedUser
 
         // when: getUserById 메서드를 호출할 때
-        val result = userService.getUserById(userId)
+        val result = userService.getUser(userId)
 
         // then: deletedAt이 설정된 유저도 정상적으로 반환되어야 한다
         result shouldNotBe null
@@ -155,5 +160,185 @@ class UserServiceTest {
 
         // verify: repository의 findById가 정확히 한 번 호출되었는지 검증
         coVerify(exactly = 1) { userRepository.findById(userId) }
+    }
+
+    @Test
+    @DisplayName("updateUser - 요청 필드가 주어지면 해당 필드만 갱신한 뒤 저장한다")
+    fun `given valid update request, when updateUser, then should mutate only provided fields`() = runTest {
+        // given
+        val userId = UUID.randomUUID()
+        val originalUser = User(
+            id = userId,
+            email = "user@example.com",
+            password = "password",
+            name = "Old Name",
+            profileImageUrl = "https://old.example.com/profile.png",
+            description = "Old description",
+            githubLink = "https://github.com/old",
+            createdAt = LocalDateTime.now().minusDays(10),
+            modifiedAt = LocalDateTime.now().minusDays(5),
+        )
+        val request = UpdateUserRequest(
+            name = "New Name",
+            profileImageUrl = "https://new.example.com/profile.png",
+            description = "New description",
+            githubLink = "https://github.com/new"
+        )
+        coEvery { userRepository.findById(userId) } returns originalUser
+        coEvery { userRepository.save(any()) } answers { firstArg() }
+
+        // when
+        val updated = userService.updateUser(userId, request)
+
+        // then
+        updated.name shouldBe "New Name"
+        updated.profileImageUrl shouldBe "https://new.example.com/profile.png"
+        updated.description shouldBe "New description"
+        updated.githubLink shouldBe "https://github.com/new"
+        updated.email shouldBe "user@example.com" // 변경되지 말아야 하는 필드
+        coVerify(exactly = 1) { userRepository.findById(userId) }
+        coVerify(exactly = 1) { userRepository.save(match { it.id == userId }) }
+    }
+
+    @Test
+    @DisplayName("updateUser - 존재하지 않는 유저라면 USER_NOT_FOUND 예외를 던진다")
+    fun `given non existing user id, when updateUser, then should throw BusinessException`() = runTest {
+        // given
+        val userId = UUID.randomUUID()
+        val request = UpdateUserRequest(name = "should not matter")
+        coEvery { userRepository.findById(userId) } returns null
+
+        // when & then
+        val exception = shouldThrow<BusinessException> {
+            userService.updateUser(userId, request)
+        }
+        exception.errorCode shouldBe ErrorCode.USER_NOT_FOUND
+        coVerify(exactly = 1) { userRepository.findById(userId) }
+        coVerify(exactly = 0) { userRepository.save(any()) }
+    }
+
+    @Test
+    @DisplayName("updateUser - 모든 필드가 null이더라도 modifiedAt 갱신을 위해 저장한다")
+    fun `given empty update request, when updateUser, then should keep original values`() = runTest {
+        // given
+        val userId = UUID.randomUUID()
+        val originalUser = User(
+            id = userId,
+            email = "user@example.com",
+            password = "password",
+            name = "Existing Name",
+            profileImageUrl = "https://example.com/profile.png",
+            description = "Existing description",
+            githubLink = "https://github.com/existing",
+            createdAt = LocalDateTime.now(),
+            modifiedAt = LocalDateTime.now().minusDays(1),
+        )
+        coEvery { userRepository.findById(userId) } returns originalUser
+        coEvery { userRepository.save(any()) } answers { firstArg() }
+
+        // when
+        val updated = userService.updateUser(userId, UpdateUserRequest())
+
+        // then
+        updated.name shouldBe "Existing Name"
+        updated.profileImageUrl shouldBe "https://example.com/profile.png"
+        updated.description shouldBe "Existing description"
+        updated.githubLink shouldBe "https://github.com/existing"
+        coVerify(exactly = 1) { userRepository.save(match { it.id == userId }) }
+    }
+
+    @Test
+    @DisplayName("searchUserList - 키워드와 기술스택 필터를 적용하여 Page 정보를 반환한다")
+    fun `given keyword and skills, when searchUserList, then should return mapped page`() = runTest {
+        // given
+        val userId = UUID.randomUUID()
+        val pageable = PageRequest.of(0, 10)
+        val user = User(
+            id = userId,
+            email = "search@example.com",
+            password = "pass",
+            name = "Search Target",
+            profileImageUrl = null,
+            description = "desc",
+            githubLink = null,
+            createdAt = LocalDateTime.now(),
+            modifiedAt = LocalDateTime.now(),
+        )
+        val skills = listOf(UUID.randomUUID(), UUID.randomUUID())
+        every {
+            userRepository.findAllUserByFilter(
+                keyword = "search",
+                skills = skills,
+                skillsCount = skills.size,
+                limit = pageable.pageSize,
+                offset = pageable.offset,
+            )
+        } returns flowOf(user)
+        coEvery { userRepository.countAllByFilter("search", skills, skills.size) } returns 1
+
+        // when
+        val page = userService.searchUserList("search", skills, pageable)
+
+        // then
+        page.totalElements shouldBe 1
+        page.content.shouldNotBe(null)
+        page.content.size shouldBe 1
+        page.content.first().email shouldBe "search@example.com"
+        page.content.first().name shouldBe "Search Target"
+    }
+
+    @Test
+    @DisplayName("searchUserList - 공백 키워드와 skills=null일 때 기본 필터로 조회한다")
+    fun `given blank keyword and no skills, when searchUserList, then should treat filters as optional`() = runTest {
+        // given
+        val pageable = PageRequest.of(2, 20)
+        val user = User(
+            id = UUID.randomUUID(),
+            email = "blank@example.com",
+            password = "pass",
+            name = "Blank Keyword",
+            createdAt = LocalDateTime.now(),
+            modifiedAt = LocalDateTime.now(),
+        )
+        every {
+            userRepository.findAllUserByFilter(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+            )
+        } returns flowOf(user)
+        coEvery { userRepository.countAllByFilter(null, null, 0) } returns 1
+
+        // when
+        val page = userService.searchUserList("   ", null, pageable)
+
+        // then
+        page.content.first().email shouldBe "blank@example.com"
+        verify(exactly = 1) {
+            userRepository.findAllUserByFilter(
+                null,
+                null,
+                0,
+                20,
+                40,
+            )
+        }
+    }
+
+    @Test
+    @DisplayName("existsUser - 저장소 존재 여부 결과를 그대로 반환한다")
+    fun `given user id, when existsUser, then should delegate to repository`() = runTest {
+        // given
+        val userId = UUID.randomUUID()
+        coEvery { userRepository.existsById(userId) } returns true
+
+        // when
+        val exists = userService.existsUser(userId)
+
+        // then
+        exists shouldBe true
+        coVerify(exactly = 1) { userRepository.existsById(userId) }
     }
 }
