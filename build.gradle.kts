@@ -46,11 +46,26 @@ dependencies {
     runtimeOnly("com.mysql:mysql-connector-j")
     runtimeOnly("io.asyncer:r2dbc-mysql")
 
+    runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.104.Final:osx-aarch_64")
+
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    // MockK for Kotlin-friendly mocking
+    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("com.ninja-squad:springmockk:4.0.2")
+
+    // Testcontainers for integration tests
+    testImplementation("org.testcontainers:testcontainers:1.20.4")
+    testImplementation("org.testcontainers:mysql:1.20.4")
+    testImplementation("org.testcontainers:r2dbc:1.20.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.20.4")
+
+    // Kotest for better Kotlin assertions
+    testImplementation("io.kotest:kotest-assertions-core:5.9.1")
 }
 
 dependencyManagement {

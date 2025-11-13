@@ -404,3 +404,5 @@ src/main/resources/application.yml
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux,intellij,intellij+all,intellij+iml,visualstudiocode,java,kotlin,netbeans,gradle
 
 src/main/resources/messages/messages.yml
+/.claude/
+/src/test/resources/
