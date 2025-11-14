@@ -10,11 +10,6 @@ pipeline {
         CONTAINER_NAME = "openknot-user-service"
         APP_PORT = "8082"
         SPRING_PROFILES_ACTIVE = "prod"
-
-        MESSAGES_MAIN_YML = credentials('USER_SERVICE_MESSAGES_MAIN_YML')
-        MESSAGES_TEST_YML = credentials('USER_SERVICE_MESSAGES_TEST_YML')
-        APPLICATION_TEST_YML = credentials('USER_SERVICE_APPLICATION_TEST_YML')
-        SCHEMA_SQL = credentials('USER_SERVICE_SCHEMA_SQL_YML')
     }
 
     stages {
