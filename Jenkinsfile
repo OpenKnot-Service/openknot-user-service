@@ -2,8 +2,6 @@ pipeline {
     agent any
 
     environment {
-        SPRING_PROFILES_ACTIVE = "prod"
-
         DB_URL = credentials('DB_URL')
         DB_USERNAME = credentials('DB_USERNAME')
         DB_PASSWORD = credentials('DB_PASSWORD')
@@ -11,6 +9,12 @@ pipeline {
         IMAGE_NAME = "openknot-user-service"
         CONTAINER_NAME = "openknot-user-service"
         APP_PORT = "8082"
+        SPRING_PROFILES_ACTIVE = "prod"
+
+        MESSAGES_MAIN_YML = credentials('USER_SERVICE_MESSAGES_MAIN_YML')
+        MESSAGES_TEST_YML = credentials('USER_SERVICE_MESSAGES_TEST_YML')
+        APPLICATION_TEST_YML = credentials('USER_SERVICE_APPLICATION_TEST_YML')
+        SCHEMA_SQL = credentials('USER_SERVICE_SCHEMA_SQL_YML')
     }
 
     stages {
@@ -19,6 +23,27 @@ pipeline {
                 git branch: 'main',
                     credentialsId: 'GitHub_Token',
                     url: 'https://github.com/OpenKnot-Service/openknot-user-service.git'
+            }
+        }
+
+        stage('Prepare resource files') {
+            steps {
+                sh """
+                    mkdir -p src/main/resources/messages
+                    mkdir -p src/test/resources/messages
+                """
+
+                writeFile file: 'src/main/resources/messages/messages.yml'
+                          text: env.USER_SERVICE_MESSAGES_MAIN_YML
+
+                writeFile file: 'src/test/resources/messages/messages.yml'
+                          text: env.USER_SERVICE_MESSAGES_TEST_YML
+
+                writeFile file: 'src/test/resources/application-test.yml'
+                          text: env.USER_SERVICE_APPLICATION_TEST_YML
+
+                writeFile file: 'src/test/resources/schema.sql'
+                          text: env.USER_SERVICE_SCHEMA_SQL_YML
             }
         }
 
