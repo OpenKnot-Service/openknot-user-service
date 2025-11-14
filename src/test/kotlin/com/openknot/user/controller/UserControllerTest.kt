@@ -158,7 +158,7 @@ class UserControllerTest {
             .expectStatus().isNotFound
             .expectBody()
             .jsonPath("$.code").isEqualTo("USER.001")
-            .jsonPath("$.message").isEqualTo("유저를 찾을 수 없습니다.")
+            .jsonPath("$.message").isEqualTo("사용자를 찾을 수 없음")
 
         // verify: userService.getUserById가 호출되었는지 검증
         coVerify(exactly = 1) { userService.getUser(nonExistingUserId) }

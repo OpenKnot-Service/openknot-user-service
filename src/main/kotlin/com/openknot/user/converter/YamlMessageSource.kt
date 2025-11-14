@@ -53,7 +53,7 @@ class YamlMessageSource : AbstractMessageSource() {
     companion object {
         private val DEFAULT_MESSAGES = mapOf(
             "USER" to mapOf(
-                "001" to "유저를 찾을 수 없습니다.",
+                "001" to "사용자를 찾을 수 없음",
                 "002" to "중복 이메일 입니다.",
                 "003" to "틀린 비밀번호입니다.",
             ),

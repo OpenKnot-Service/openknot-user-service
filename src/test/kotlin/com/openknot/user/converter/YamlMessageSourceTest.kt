@@ -23,7 +23,7 @@ class YamlMessageSourceTest {
     fun `given user code, when getMessage, then should return localized string`() {
         val message = messageSource.getMessage("USER.001", emptyArray(), Locale.KOREAN)
 
-        message shouldBe "유저를 찾을 수 없습니다."
+        message shouldBe "사용자를 찾을 수 없음"
     }
 
     @Test

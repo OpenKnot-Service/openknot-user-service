@@ -46,7 +46,7 @@ class MessageConverterTest {
         val result = messageConverter.getMessage(code)
 
         // then: 올바른 메시지가 반환되어야 한다
-        result shouldBe "유저를 찾을 수 없습니다."
+        result shouldBe "사용자를 찾을 수 없음"
     }
 
     @Test

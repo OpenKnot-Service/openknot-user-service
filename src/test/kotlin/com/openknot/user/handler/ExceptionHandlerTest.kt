@@ -42,7 +42,7 @@ class ExceptionHandlerTest {
         response.statusCode shouldBe HttpStatus.NOT_FOUND
         response.body shouldNotBe null
         response.body!!.code shouldBe "USER.001"
-        response.body!!.message shouldBe "유저를 찾을 수 없습니다."
+        response.body!!.message shouldBe "사용자를 찾을 수 없음"
     }
 
     @Test

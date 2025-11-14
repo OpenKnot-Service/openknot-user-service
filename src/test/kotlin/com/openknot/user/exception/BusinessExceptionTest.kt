@@ -16,7 +16,7 @@ class BusinessExceptionTest {
 
         // then
         exception.errorCode shouldBe ErrorCode.USER_NOT_FOUND
-        exception.message shouldBe "유저를 찾을 수 없습니다."
+        exception.message shouldBe "사용자를 찾을 수 없음"
     }
 
     @Test
