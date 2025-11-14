@@ -33,16 +33,16 @@ pipeline {
                     mkdir -p src/test/resources/messages
                 """
 
-                writeFile file: 'src/main/resources/messages/messages.yml'
+                writeFile file: 'src/main/resources/messages/messages.yml',
                           text: env.USER_SERVICE_MESSAGES_MAIN_YML
 
-                writeFile file: 'src/test/resources/messages/messages.yml'
+                writeFile file: 'src/test/resources/messages/messages.yml',
                           text: env.USER_SERVICE_MESSAGES_TEST_YML
 
-                writeFile file: 'src/test/resources/application-test.yml'
+                writeFile file: 'src/test/resources/application-test.yml',
                           text: env.USER_SERVICE_APPLICATION_TEST_YML
 
-                writeFile file: 'src/test/resources/schema.sql'
+                writeFile file: 'src/test/resources/schema.sql',
                           text: env.USER_SERVICE_SCHEMA_SQL_YML
             }
         }
