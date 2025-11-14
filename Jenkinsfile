@@ -1,11 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        jdk ("JDK_21")
-        gradle ("Gradle 8.14.3")
-    }
-
     environment {
         SPRING_PROFILES_ACTIVE = "prod"
 
