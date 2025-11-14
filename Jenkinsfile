@@ -26,27 +26,6 @@ pipeline {
             }
         }
 
-        stage('Prepare resource files') {
-            steps {
-                sh """
-                    mkdir -p src/main/resources/messages
-                    mkdir -p src/test/resources/messages
-                """
-
-                writeFile file: 'src/main/resources/messages/messages.yml',
-                          text: env.MESSAGES_MAIN_YML
-
-                writeFile file: 'src/test/resources/messages/messages.yml',
-                          text: env.MESSAGES_TEST_YML
-
-                writeFile file: 'src/test/resources/application-test.yml',
-                          text: env.APPLICATION_TEST_YML
-
-                writeFile file: 'src/test/resources/schema.sql',
-                          text: env.SCHEMA_SQL
-            }
-        }
-
         stage('Build & Test') {
             steps {
                 sh "chmod +x gradlew || true"
