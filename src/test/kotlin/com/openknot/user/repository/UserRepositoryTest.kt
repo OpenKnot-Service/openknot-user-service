@@ -41,12 +41,29 @@ class UserRepositoryTest {
     companion object {
         @Container
         @JvmStatic
-        val mysqlContainer = MySQLContainer<Nothing>("mysql:8.0").apply {
-            withDatabaseName("testdb")
-            withUsername("test")
-            withPassword("test")
-            withInitScript("schema.sql")  // 테이블 스키마 초기화 스크립트
-        }
+        val mysqlContainer =
+            object : MySQLContainer<Nothing>("mysql:8.0") {
+                override fun start() {
+                    super.start()
+                    initializeSchema()
+                }
+
+                private fun initializeSchema() {
+                    runCatching {
+                        createConnection("").use { connection ->
+                            connection.createStatement().use { statement ->
+                                SCHEMA_STATEMENTS.forEach { sql ->
+                                    statement.execute(sql)
+                                }
+                            }
+                        }
+                    }.getOrElse { throw IllegalStateException("Failed to initialize schema", it) }
+                }
+            }.apply {
+                withDatabaseName("testdb")
+                withUsername("test")
+                withPassword("test")
+            }
 
         @DynamicPropertySource
         @JvmStatic
@@ -57,6 +74,26 @@ class UserRepositoryTest {
             registry.add("spring.r2dbc.username") { mysqlContainer.username }
             registry.add("spring.r2dbc.password") { mysqlContainer.password }
         }
+
+        private val SCHEMA_STATEMENTS = listOf(
+            "DROP TABLE IF EXISTS `user`",
+            """
+            CREATE TABLE `user` (
+                id BINARY(16) PRIMARY KEY,
+                email VARCHAR(255) NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                profile_image_url VARCHAR(512),
+                description TEXT,
+                github_link VARCHAR(512),
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                modified_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+                deleted_at DATETIME(6),
+                is_new BIT(1) DEFAULT 1
+            )
+            """
+                .trimIndent(),
+        )
     }
 
     @Autowired
