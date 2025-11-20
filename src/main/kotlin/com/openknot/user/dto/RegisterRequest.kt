@@ -10,10 +10,7 @@ data class RegisterRequest(
     val password: String,
     @field:NotBlank
     val name: String,
-    @field:NotBlank
     val profileImageUrl: String? = null,
-    @field:NotBlank
     val description: String? = null,
-    @field:NotBlank
     val githubLink: String? = null,
 )
