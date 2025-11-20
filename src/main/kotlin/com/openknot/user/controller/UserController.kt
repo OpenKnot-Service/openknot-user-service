@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
-@RequestMapping("/users")
 class UserController(
     private val userService: UserService,
 ) {
