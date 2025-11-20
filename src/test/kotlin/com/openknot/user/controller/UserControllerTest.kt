@@ -334,9 +334,9 @@ class UserControllerTest {
 
         coEvery { userService.getUser(nonExistingUserId) } throws BusinessException(ErrorCode.USER_NOT_FOUND)
 
-        // when & then: GET /users/me 요청 시 404와 에러 응답이 반환되어야 한다
+        // when & then: GET /me 요청 시 404와 에러 응답이 반환되어야 한다
         webTestClient.get()
-            .uri("/users/me?id={id}", nonExistingUserId.toString())
+            .uri("/me?id={id}", nonExistingUserId.toString())
             .exchange()
             .expectStatus().isNotFound
             .expectBody()
@@ -353,9 +353,9 @@ class UserControllerTest {
         // given: 잘못된 UUID 형식
         val invalidUuidString = "invalid-uuid-format"
 
-        // when & then: GET /users/me 요청 시 400과 에러 응답이 반환되어야 한다
+        // when & then: GET /me 요청 시 400과 에러 응답이 반환되어야 한다
         webTestClient.get()
-            .uri("/users/me?id={id}", invalidUuidString)
+            .uri("/me?id={id}", invalidUuidString)
             .exchange()
             .expectStatus().isBadRequest
             .expectBody()
@@ -433,7 +433,7 @@ class UserControllerTest {
 
         // when & then: GET /me 요청 시 200 OK가 반환되어야 한다
         webTestClient.get()
-            .uri("/users/me?id={id}", minUuid.toString())
+            .uri("/me?id={id}", minUuid.toString())
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -462,7 +462,7 @@ class UserControllerTest {
 
         // when & then: 대문자 UUID로 GET /me 요청 시 200 OK가 반환되어야 한다
         webTestClient.get()
-            .uri("/users/me?id={id}", uppercaseUuidString)
+            .uri("/me?id={id}", uppercaseUuidString)
             .exchange()
             .expectStatus().isOk
             .expectBody()
