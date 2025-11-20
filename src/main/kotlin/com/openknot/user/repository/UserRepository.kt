@@ -65,4 +65,8 @@ interface UserRepository : CoroutineCrudRepository<User, UUID> {
         skills: List<UUID>?,
         skillsCount: Int,
     ): Long
+
+    suspend fun findByEmail(email: String): User?
+    suspend fun existsByEmail(email: String): Boolean
+    fun email(email: String): MutableList<User>
 }
