@@ -47,6 +47,7 @@ pipeline {
 
                     docker run -d \
                       --name ${CONTAINER_NAME} \
+                      --network backend \
                       -p ${APP_PORT}:${APP_PORT} \
                       -e SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} \
                       -e DB_URL=${DB_URL} \
