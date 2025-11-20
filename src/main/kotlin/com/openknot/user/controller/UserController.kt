@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -45,10 +46,10 @@ class UserController(
 
     @GetMapping("/me")
     suspend fun getCurrentUser(
-        @RequestParam(value = "id", required = true) id: UUID, // TODO: [DEV] gateway 구현 이후 토큰으로 변경 예정
+        @RequestHeader("X-User-Id") userId: UUID,
     ): ResponseEntity<UserInfoResponse> {
         return ResponseEntity.ok(
-            UserInfoResponse.fromEntity(userService.getUser(id)),
+            UserInfoResponse.fromEntity(userService.getUser(userId)),
         )
     }
 
