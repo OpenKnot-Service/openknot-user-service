@@ -127,7 +127,7 @@ class UserControllerTest {
             .exchange()
             .expectStatus().isOk
             .expectBody()
-            .jsonPath("$").isEqualTo(userId.toString())
+            .jsonPath("$.userId").isEqualTo(userId.toString())
 
         coVerify(exactly = 1) { userService.searchUserIdByCredentials(request.email, request.password) }
     }
