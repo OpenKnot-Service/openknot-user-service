@@ -1,6 +1,8 @@
 package com.openknot.user.controller
 
 import com.ninjasquad.springmockk.MockkBean
+import com.openknot.user.dto.CredentialValidationRequest
+import com.openknot.user.dto.RegisterRequest
 import com.openknot.user.dto.UpdateUserRequest
 import com.openknot.user.dto.UserInfoResponse
 import com.openknot.user.entity.User
@@ -107,7 +109,188 @@ class UserControllerTest {
     private lateinit var techStackService: TechStackService
 
     @Test
-    @DisplayName("GET /users/me - 유저가 존재할 때 200 OK와 유저 정보를 반환한다")
+    @DisplayName("POST /validate-credentials - 올바른 자격증명일 때 200 OK와 유저 ID를 반환한다")
+    fun `given valid credentials, when validate credentials, then should return 200 with user id`() {
+        // given
+        val request = CredentialValidationRequest(
+            email = "test@example.com",
+            password = "password123"
+        )
+        val userId = UUID.randomUUID()
+
+        coEvery { userService.searchUserIdByCredentials(request.email, request.password) } returns userId
+
+        // when & then
+        webTestClient.post()
+            .uri("/validate-credentials")
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$").isEqualTo(userId.toString())
+
+        coVerify(exactly = 1) { userService.searchUserIdByCredentials(request.email, request.password) }
+    }
+
+    @Test
+    @DisplayName("POST /validate-credentials - 존재하지 않는 이메일일 때 404 NOT_FOUND를 반환한다")
+    fun `given non-existing email, when validate credentials, then should return 404`() {
+        // given
+        val request = CredentialValidationRequest(
+            email = "nonexistent@example.com",
+            password = "password123"
+        )
+
+        coEvery {
+            userService.searchUserIdByCredentials(request.email, request.password)
+        } throws BusinessException(ErrorCode.USER_NOT_FOUND)
+
+        // when & then
+        webTestClient.post()
+            .uri("/validate-credentials")
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isNotFound
+            .expectBody()
+            .jsonPath("$.code").isEqualTo("USER.001")
+
+        coVerify(exactly = 1) { userService.searchUserIdByCredentials(request.email, request.password) }
+    }
+
+    @Test
+    @DisplayName("POST /validate-credentials - 잘못된 비밀번호일 때 401 UNAUTHORIZED를 반환한다")
+    fun `given wrong password, when validate credentials, then should return 401`() {
+        // given
+        val request = CredentialValidationRequest(
+            email = "test@example.com",
+            password = "wrongPassword"
+        )
+
+        coEvery {
+            userService.searchUserIdByCredentials(request.email, request.password)
+        } throws BusinessException(ErrorCode.WRONG_PASSWORD)
+
+        // when & then
+        webTestClient.post()
+            .uri("/validate-credentials")
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isUnauthorized
+            .expectBody()
+            .jsonPath("$.code").isEqualTo("USER.003")
+
+        coVerify(exactly = 1) { userService.searchUserIdByCredentials(request.email, request.password) }
+    }
+
+    @Test
+    @DisplayName("POST /register - 유효한 요청일 때 201 CREATED와 유저 정보를 반환한다")
+    fun `given valid register request, when register user, then should return 201 with user info`() {
+        // given
+        val request = RegisterRequest(
+            email = "newuser@example.com",
+            password = "password123",
+            name = "New User",
+            profileImageUrl = "https://example.com/profile.jpg",
+            description = "Test description",
+            githubLink = "https://github.com/newuser"
+        )
+        val userId = UUID.randomUUID()
+        val createdUser = User(
+            id = userId,
+            email = request.email,
+            password = "hashedPassword",
+            name = request.name,
+            profileImageUrl = request.profileImageUrl,
+            description = request.description,
+            githubLink = request.githubLink,
+            createdAt = LocalDateTime.of(2025, 1, 1, 0, 0, 0),
+            modifiedAt = LocalDateTime.of(2025, 1, 1, 0, 0, 0)
+        )
+
+        coEvery { userService.createUser(any()) } returns createdUser
+
+        // when & then
+        webTestClient.post()
+            .uri("/register")
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isCreated
+            .expectBody()
+            .jsonPath("$.email").isEqualTo(request.email)
+            .jsonPath("$.name").isEqualTo(request.name)
+            .jsonPath("$.profileImageUrl").isEqualTo(request.profileImageUrl!!)
+            .jsonPath("$.description").isEqualTo(request.description!!)
+            .jsonPath("$.githubLink").isEqualTo(request.githubLink!!)
+            .jsonPath("$.password").doesNotExist()
+
+        coVerify(exactly = 1) { userService.createUser(any()) }
+    }
+
+    @Test
+    @DisplayName("POST /register - 이미 존재하는 이메일일 때 409 CONFLICT를 반환한다")
+    fun `given duplicate email, when register user, then should return 409`() {
+        // given
+        val request = RegisterRequest(
+            email = "existing@example.com",
+            password = "password123",
+            name = "Test User"
+        )
+
+        coEvery { userService.createUser(any()) } throws BusinessException(ErrorCode.DUPLICATE_EMAIL)
+
+        // when & then
+        webTestClient.post()
+            .uri("/register")
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isEqualTo(409)
+            .expectBody()
+            .jsonPath("$.code").isEqualTo("USER.002")
+
+        coVerify(exactly = 1) { userService.createUser(any()) }
+    }
+
+    @Test
+    @DisplayName("POST /register - 필수 필드가 없을 때 400 BAD_REQUEST를 반환한다")
+    fun `given invalid request with missing fields, when register user, then should return 400`() {
+        // given: email, password, name이 모두 필수
+        val invalidRequest = mapOf(
+            "email" to "test@example.com"
+            // password와 name이 없음
+        )
+
+        // when & then
+        webTestClient.post()
+            .uri("/register")
+            .bodyValue(invalidRequest)
+            .exchange()
+            .expectStatus().isBadRequest
+
+        coVerify(exactly = 0) { userService.createUser(any()) }
+    }
+
+    @Test
+    @DisplayName("POST /register - 잘못된 이메일 형식일 때 400 BAD_REQUEST를 반환한다")
+    fun `given invalid email format, when register user, then should return 400`() {
+        // given
+        val invalidRequest = RegisterRequest(
+            email = "invalid-email-format",
+            password = "password123",
+            name = "Test User"
+        )
+
+        // when & then
+        webTestClient.post()
+            .uri("/register")
+            .bodyValue(invalidRequest)
+            .exchange()
+            .expectStatus().isBadRequest
+
+        coVerify(exactly = 0) { userService.createUser(any()) }
+    }
+
+    @Test
+    @DisplayName("GET /me - 유저가 존재할 때 200 OK와 유저 정보를 반환한다")
     fun `given existing user id, when get current user, then should return 200 with user info`() {
         // given: 존재하는 유저 ID와 해당 유저 엔티티
         val userId = UUID.randomUUID()
@@ -125,9 +308,9 @@ class UserControllerTest {
 
         coEvery { userService.getUser(userId) } returns user
 
-        // when & then: GET /users/me 요청 시 200 OK와 유저 정보가 반환되어야 한다
+        // when & then: GET /me 요청 시 200 OK와 유저 정보가 반환되어야 한다
         webTestClient.get()
-            .uri("/users/me?id={id}", userId.toString())
+            .uri("/me?id={id}", userId.toString())
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -144,7 +327,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/me - 유저가 존재하지 않을 때 404 NOT_FOUND를 반환한다")
+    @DisplayName("GET /me - 유저가 존재하지 않을 때 404 NOT_FOUND를 반환한다")
     fun `given non-existing user id, when get current user, then should return 404`() {
         // given: 존재하지 않는 유저 ID
         val nonExistingUserId = UUID.randomUUID()
@@ -165,7 +348,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/me - 잘못된 UUID 형식일 때 400 BAD_REQUEST를 반환한다")
+    @DisplayName("GET /me - 잘못된 UUID 형식일 때 400 BAD_REQUEST를 반환한다")
     fun `given invalid uuid format, when get current user, then should return 400`() {
         // given: 잘못된 UUID 형식
         val invalidUuidString = "invalid-uuid-format"
@@ -184,11 +367,11 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/me - id 파라미터가 없을 때 400 BAD_REQUEST를 반환한다")
+    @DisplayName("GET /me - id 파라미터가 없을 때 400 BAD_REQUEST를 반환한다")
     fun `given missing id parameter, when get current user, then should return 400`() {
-        // when & then: id 파라미터 없이 GET /users/me 요청 시 400이 반환되어야 한다
+        // when & then: id 파라미터 없이 GET /me 요청 시 400이 반환되어야 한다
         webTestClient.get()
-            .uri("/users/me")
+            .uri("/me")
             .exchange()
             .expectStatus().isBadRequest
 
@@ -197,7 +380,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/me - 선택적 필드가 null인 유저도 정상적으로 반환한다")
+    @DisplayName("GET /me - 선택적 필드가 null인 유저도 정상적으로 반환한다")
     fun `given user with null optional fields, when get current user, then should return 200 with null fields`() {
         // given: 선택적 필드가 null인 유저
         val userId = UUID.randomUUID()
@@ -215,9 +398,9 @@ class UserControllerTest {
 
         coEvery { userService.getUser(userId) } returns userWithNullFields
 
-        // when & then: GET /users/me 요청 시 200 OK와 유저 정보가 반환되어야 한다
+        // when & then: GET /me 요청 시 200 OK와 유저 정보가 반환되어야 한다
         webTestClient.get()
-            .uri("/users/me?id={id}", userId.toString())
+            .uri("/me?id={id}", userId.toString())
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -233,7 +416,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/me - 최소값 UUID로 유저를 정상적으로 조회한다")
+    @DisplayName("GET /me - 최소값 UUID로 유저를 정상적으로 조회한다")
     fun `given minimum uuid, when get current user, then should return 200`() {
         // given: 최소값 UUID (모든 비트 0)
         val minUuid = UUID.fromString("00000000-0000-0000-0000-000000000000")
@@ -248,7 +431,7 @@ class UserControllerTest {
 
         coEvery { userService.getUser(minUuid) } returns user
 
-        // when & then: GET /users/me 요청 시 200 OK가 반환되어야 한다
+        // when & then: GET /me 요청 시 200 OK가 반환되어야 한다
         webTestClient.get()
             .uri("/users/me?id={id}", minUuid.toString())
             .exchange()
@@ -261,7 +444,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/me - 대문자 UUID 문자열로도 정상적으로 조회한다")
+    @DisplayName("GET /me - 대문자 UUID 문자열로도 정상적으로 조회한다")
     fun `given uppercase uuid string, when get current user, then should return 200`() {
         // given: 대문자 UUID 문자열
         val userId = UUID.randomUUID()
@@ -277,7 +460,7 @@ class UserControllerTest {
 
         coEvery { userService.getUser(userId) } returns user
 
-        // when & then: 대문자 UUID로 GET /users/me 요청 시 200 OK가 반환되어야 한다
+        // when & then: 대문자 UUID로 GET /me 요청 시 200 OK가 반환되어야 한다
         webTestClient.get()
             .uri("/users/me?id={id}", uppercaseUuidString)
             .exchange()
@@ -290,7 +473,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/{userId} - PathVariable로 유저 조회 시 200 OK를 반환한다")
+    @DisplayName("GET /{userId} - PathVariable로 유저 조회 시 200 OK를 반환한다")
     fun `given existing user id, when getUser endpoint called, then should return 200`() {
         val userId = UUID.randomUUID()
         val user = User(
@@ -307,7 +490,7 @@ class UserControllerTest {
         coEvery { userService.getUser(userId) } returns user
 
         webTestClient.get()
-            .uri("/users/{userId}", userId)
+            .uri("/{userId}", userId)
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -318,13 +501,13 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/{userId} - 존재하지 않는 유저면 404를 반환한다")
+    @DisplayName("GET /{userId} - 존재하지 않는 유저면 404를 반환한다")
     fun `given non existing user id, when getUser endpoint called, then should return 404`() {
         val userId = UUID.randomUUID()
         coEvery { userService.getUser(userId) } throws BusinessException(ErrorCode.USER_NOT_FOUND)
 
         webTestClient.get()
-            .uri("/users/{userId}", userId)
+            .uri("/{userId}", userId)
             .exchange()
             .expectStatus().isNotFound
             .expectBody()
@@ -334,7 +517,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /users/{userId} - 요청된 필드를 업데이트하고 응답을 반환한다")
+    @DisplayName("PUT /{userId} - 요청된 필드를 업데이트하고 응답을 반환한다")
     fun `given update request, when updateUser endpoint called, then should return updated payload`() {
         val userId = UUID.randomUUID()
         val request = UpdateUserRequest(
@@ -358,7 +541,7 @@ class UserControllerTest {
         coEvery { userService.updateUser(userId, capture(requestSlot)) } returns updatedUser
 
         webTestClient.put()
-            .uri("/users/{userId}", userId)
+            .uri("/{userId}", userId)
             .bodyValue(request)
             .exchange()
             .expectStatus().isOk
@@ -376,13 +559,13 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /users/{userId} - 대상 유저가 없으면 404를 반환한다")
+    @DisplayName("PUT /{userId} - 대상 유저가 없으면 404를 반환한다")
     fun `given non existing user id, when updateUser endpoint called, then should return 404`() {
         val userId = UUID.randomUUID()
         coEvery { userService.updateUser(userId, any()) } throws BusinessException(ErrorCode.USER_NOT_FOUND)
 
         webTestClient.put()
-            .uri("/users/{userId}", userId)
+            .uri("/{userId}", userId)
             .bodyValue(UpdateUserRequest(name = "fail"))
             .exchange()
             .expectStatus().isNotFound
@@ -393,7 +576,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/search - 쿼리와 스킬 필터를 적용하여 페이지 데이터를 반환한다")
+    @DisplayName("GET /search - 쿼리와 스킬 필터를 적용하여 페이지 데이터를 반환한다")
     fun `given query and skill filters, when searchUser endpoint called, then should return paged response`() {
         val pageable = PageRequest.of(1, 2)
         val skills = listOf(UUID.randomUUID(), UUID.randomUUID())
@@ -426,7 +609,7 @@ class UserControllerTest {
 
         webTestClient.get()
             .uri {
-                it.path("/users/search")
+                it.path("/search")
                     .queryParam("q", "java")
                     .queryParam("skills", skills[0])
                     .queryParam("skills", skills[1])

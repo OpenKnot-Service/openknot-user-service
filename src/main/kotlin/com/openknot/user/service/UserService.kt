@@ -109,6 +109,6 @@ class UserService(
     suspend fun existsUserByEmail(email: String): Boolean = userRepository.existsByEmail(email)
 
     private suspend fun checkUserExists(email: String) {
-        if (!existsUserByEmail(email)) throw BusinessException(ErrorCode.USER_NOT_FOUND)
+        if (existsUserByEmail(email)) throw BusinessException(ErrorCode.DUPLICATE_EMAIL)
     }
 }

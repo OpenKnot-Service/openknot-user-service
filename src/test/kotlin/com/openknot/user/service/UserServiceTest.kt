@@ -1,5 +1,6 @@
 package com.openknot.user.service
 
+import com.openknot.user.dto.RegisterRequest
 import com.openknot.user.dto.UpdateUserRequest
 import com.openknot.user.entity.User
 import com.openknot.user.exception.BusinessException
@@ -343,5 +344,202 @@ class UserServiceTest {
         // then
         exists shouldBe true
         coVerify(exactly = 1) { userRepository.existsById(userId) }
+    }
+
+    @Test
+    @DisplayName("searchUserIdByCredentials - 올바른 이메일과 비밀번호로 유저 ID를 반환한다")
+    fun `given valid credentials, when searchUserIdByCredentials, then should return user id`() = runTest {
+        // given
+        val email = "test@example.com"
+        val rawPassword = "password123"
+        val hashedPassword = "hashedPassword123"
+        val userId = UUID.randomUUID()
+        val user = User(
+            id = userId,
+            email = email,
+            password = hashedPassword,
+            name = "Test User",
+            createdAt = LocalDateTime.now(),
+            modifiedAt = LocalDateTime.now()
+        )
+
+        coEvery { userRepository.findByEmail(email) } returns user
+        every { passwordEncoder.matches(rawPassword, hashedPassword) } returns true
+
+        // when
+        val result = userService.searchUserIdByCredentials(email, rawPassword)
+
+        // then
+        result shouldBe userId
+        coVerify(exactly = 1) { userRepository.findByEmail(email) }
+        verify(exactly = 1) { passwordEncoder.matches(rawPassword, hashedPassword) }
+    }
+
+    @Test
+    @DisplayName("searchUserIdByCredentials - 존재하지 않는 이메일일 때 USER_NOT_FOUND 예외를 던진다")
+    fun `given non-existing email, when searchUserIdByCredentials, then should throw USER_NOT_FOUND`() = runTest {
+        // given
+        val email = "nonexistent@example.com"
+        val password = "password123"
+
+        coEvery { userRepository.findByEmail(email) } returns null
+
+        // when & then
+        val exception = shouldThrow<BusinessException> {
+            userService.searchUserIdByCredentials(email, password)
+        }
+
+        exception.errorCode shouldBe ErrorCode.USER_NOT_FOUND
+        coVerify(exactly = 1) { userRepository.findByEmail(email) }
+        verify(exactly = 0) { passwordEncoder.matches(any(), any()) }
+    }
+
+    @Test
+    @DisplayName("searchUserIdByCredentials - 비밀번호가 틀렸을 때 WRONG_PASSWORD 예외를 던진다")
+    fun `given wrong password, when searchUserIdByCredentials, then should throw WRONG_PASSWORD`() = runTest {
+        // given
+        val email = "test@example.com"
+        val wrongPassword = "wrongPassword"
+        val hashedPassword = "hashedPassword123"
+        val user = User(
+            id = UUID.randomUUID(),
+            email = email,
+            password = hashedPassword,
+            name = "Test User",
+            createdAt = LocalDateTime.now(),
+            modifiedAt = LocalDateTime.now()
+        )
+
+        coEvery { userRepository.findByEmail(email) } returns user
+        every { passwordEncoder.matches(wrongPassword, hashedPassword) } returns false
+
+        // when & then
+        val exception = shouldThrow<BusinessException> {
+            userService.searchUserIdByCredentials(email, wrongPassword)
+        }
+
+        exception.errorCode shouldBe ErrorCode.WRONG_PASSWORD
+        coVerify(exactly = 1) { userRepository.findByEmail(email) }
+        verify(exactly = 1) { passwordEncoder.matches(wrongPassword, hashedPassword) }
+    }
+
+    @Test
+    @DisplayName("createUser - 새로운 유저를 정상적으로 생성하고 저장한다")
+    fun `given valid register request, when createUser, then should create and save user`() = runTest {
+        // given
+        val request = RegisterRequest(
+            email = "newuser@example.com",
+            password = "rawPassword123",
+            name = "New User",
+            profileImageUrl = "https://example.com/profile.jpg",
+            description = "New user description",
+            githubLink = "https://github.com/newuser"
+        )
+        val hashedPassword = "hashedPassword123"
+
+        coEvery { userRepository.existsByEmail(request.email) } returns false
+        every { passwordEncoder.encode(request.password) } returns hashedPassword
+        coEvery { userRepository.save(any()) } answers { firstArg() }
+
+        // when
+        val result = userService.createUser(request)
+
+        // then
+        result shouldNotBe null
+        result.email shouldBe request.email
+        result.password shouldBe hashedPassword
+        result.name shouldBe request.name
+        result.profileImageUrl shouldBe request.profileImageUrl
+        result.description shouldBe request.description
+        result.githubLink shouldBe request.githubLink
+
+        coVerify(exactly = 1) { userRepository.existsByEmail(request.email) }
+        verify(exactly = 1) { passwordEncoder.encode(request.password) }
+        coVerify(exactly = 1) { userRepository.save(any()) }
+    }
+
+    @Test
+    @DisplayName("createUser - 이미 존재하는 이메일일 때 DUPLICATE_EMAIL 예외를 던진다")
+    fun `given duplicate email, when createUser, then should throw DUPLICATE_EMAIL`() = runTest {
+        // given
+        val request = RegisterRequest(
+            email = "existing@example.com",
+            password = "password123",
+            name = "Test User"
+        )
+
+        coEvery { userRepository.existsByEmail(request.email) } returns true
+
+        // when & then
+        val exception = shouldThrow<BusinessException> {
+            userService.createUser(request)
+        }
+
+        exception.errorCode shouldBe ErrorCode.DUPLICATE_EMAIL
+        coVerify(exactly = 1) { userRepository.existsByEmail(request.email) }
+        verify(exactly = 0) { passwordEncoder.encode(any()) }
+        coVerify(exactly = 0) { userRepository.save(any()) }
+    }
+
+    @Test
+    @DisplayName("createUser - 선택적 필드가 null인 요청도 정상적으로 처리한다")
+    fun `given register request with null optional fields, when createUser, then should create user`() = runTest {
+        // given
+        val request = RegisterRequest(
+            email = "minimal@example.com",
+            password = "password123",
+            name = "Minimal User",
+            profileImageUrl = null,
+            description = null,
+            githubLink = null
+        )
+        val hashedPassword = "hashedPassword"
+
+        coEvery { userRepository.existsByEmail(request.email) } returns false
+        every { passwordEncoder.encode(request.password) } returns hashedPassword
+        coEvery { userRepository.save(any()) } answers { firstArg() }
+
+        // when
+        val result = userService.createUser(request)
+
+        // then
+        result shouldNotBe null
+        result.email shouldBe request.email
+        result.name shouldBe request.name
+        result.profileImageUrl shouldBe null
+        result.description shouldBe null
+        result.githubLink shouldBe null
+
+        coVerify(exactly = 1) { userRepository.save(any()) }
+    }
+
+    @Test
+    @DisplayName("existsUserByEmail - 이메일 존재 여부를 반환한다")
+    fun `given email, when existsUserByEmail, then should return existence`() = runTest {
+        // given
+        val email = "test@example.com"
+        coEvery { userRepository.existsByEmail(email) } returns true
+
+        // when
+        val exists = userService.existsUserByEmail(email)
+
+        // then
+        exists shouldBe true
+        coVerify(exactly = 1) { userRepository.existsByEmail(email) }
+    }
+
+    @Test
+    @DisplayName("existsUserByEmail - 존재하지 않는 이메일일 때 false를 반환한다")
+    fun `given non-existing email, when existsUserByEmail, then should return false`() = runTest {
+        // given
+        val email = "nonexistent@example.com"
+        coEvery { userRepository.existsByEmail(email) } returns false
+
+        // when
+        val exists = userService.existsUserByEmail(email)
+
+        // then
+        exists shouldBe false
+        coVerify(exactly = 1) { userRepository.existsByEmail(email) }
     }
 }
