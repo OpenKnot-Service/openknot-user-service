@@ -3,6 +3,7 @@ package com.openknot.user.controller
 import com.openknot.user.dto.CredentialValidationRequest
 import com.openknot.user.dto.RegisterRequest
 import com.openknot.user.dto.UpdateUserRequest
+import com.openknot.user.dto.UserIdResponse
 import com.openknot.user.dto.UserInfoResponse
 import com.openknot.user.service.UserService
 import jakarta.validation.Valid
@@ -27,9 +28,9 @@ class UserController(
     @PostMapping("/validate-credentials")
     suspend fun validateCredentials(
         @RequestBody request: CredentialValidationRequest,
-    ): ResponseEntity<UUID> {
+    ): ResponseEntity<UserIdResponse> {
         return ResponseEntity.ok(
-            userService.searchUserIdByCredentials(request.email, request.password)
+            UserIdResponse(userService.searchUserIdByCredentials(request.email, request.password))
         )
     }
 
