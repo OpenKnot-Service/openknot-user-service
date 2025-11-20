@@ -310,7 +310,8 @@ class UserControllerTest {
 
         // when & then: GET /me 요청 시 200 OK와 유저 정보가 반환되어야 한다
         webTestClient.get()
-            .uri("/me?id={id}", userId.toString())
+            .uri("/me")
+            .header("X-User-Id", userId.toString())
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -336,7 +337,8 @@ class UserControllerTest {
 
         // when & then: GET /me 요청 시 404와 에러 응답이 반환되어야 한다
         webTestClient.get()
-            .uri("/me?id={id}", nonExistingUserId.toString())
+            .uri("/me")
+            .header("X-User-Id", nonExistingUserId.toString())
             .exchange()
             .expectStatus().isNotFound
             .expectBody()
@@ -355,7 +357,8 @@ class UserControllerTest {
 
         // when & then: GET /me 요청 시 400과 에러 응답이 반환되어야 한다
         webTestClient.get()
-            .uri("/me?id={id}", invalidUuidString)
+            .uri("/me")
+            .header("X-User-Id", invalidUuidString)
             .exchange()
             .expectStatus().isBadRequest
             .expectBody()
@@ -367,9 +370,9 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /me - id 파라미터가 없을 때 400 BAD_REQUEST를 반환한다")
-    fun `given missing id parameter, when get current user, then should return 400`() {
-        // when & then: id 파라미터 없이 GET /me 요청 시 400이 반환되어야 한다
+    @DisplayName("GET /me - X-User-Id 헤더가 없을 때 400 BAD_REQUEST를 반환한다")
+    fun `given missing X-User-Id header, when get current user, then should return 400`() {
+        // when & then: X-User-Id 헤더 없이 GET /me 요청 시 400이 반환되어야 한다
         webTestClient.get()
             .uri("/me")
             .exchange()
@@ -400,7 +403,8 @@ class UserControllerTest {
 
         // when & then: GET /me 요청 시 200 OK와 유저 정보가 반환되어야 한다
         webTestClient.get()
-            .uri("/me?id={id}", userId.toString())
+            .uri("/me")
+            .header("X-User-Id", userId.toString())
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -433,7 +437,8 @@ class UserControllerTest {
 
         // when & then: GET /me 요청 시 200 OK가 반환되어야 한다
         webTestClient.get()
-            .uri("/me?id={id}", minUuid.toString())
+            .uri("/me")
+            .header("X-User-Id", minUuid.toString())
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -462,7 +467,8 @@ class UserControllerTest {
 
         // when & then: 대문자 UUID로 GET /me 요청 시 200 OK가 반환되어야 한다
         webTestClient.get()
-            .uri("/me?id={id}", uppercaseUuidString)
+            .uri("/me")
+            .header("X-User-Id", uppercaseUuidString)
             .exchange()
             .expectStatus().isOk
             .expectBody()
