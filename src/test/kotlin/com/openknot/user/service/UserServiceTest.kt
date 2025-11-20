@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.data.domain.PageRequest
+import org.springframework.security.crypto.password.PasswordEncoder
 import java.time.LocalDateTime
 import java.util.*
 
@@ -35,12 +36,14 @@ import java.util.*
 class UserServiceTest {
 
     private lateinit var userRepository: UserRepository
+    private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var userService: UserService
 
     @BeforeEach
     fun setUp() {
         userRepository = mockk()
-        userService = UserService(userRepository)
+        passwordEncoder = mockk()
+        userService = UserService(passwordEncoder, userRepository)
     }
 
     @Test
