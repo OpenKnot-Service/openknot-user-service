@@ -38,10 +38,8 @@ class User(
         this.modifiedAt = LocalDateTime.now()
     }
 
-    @field:Transient
-    private var isNew: Boolean = true
     override fun getId(): UUID = this.id
-    override fun isNew(): Boolean = this.isNew
+    override fun isNew(): Boolean = createdAt == null
     override fun hashCode(): Int = id.hashCode()
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
