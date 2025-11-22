@@ -5,6 +5,7 @@ import com.openknot.user.dto.UpdateUserRequest
 import com.openknot.user.entity.User
 import com.openknot.user.exception.BusinessException
 import com.openknot.user.exception.ErrorCode
+import com.openknot.user.repository.UserGithubRepository
 import com.openknot.user.repository.UserRepository
 import kotlinx.coroutines.flow.flowOf
 import io.kotest.assertions.throwables.shouldThrow
@@ -37,14 +38,16 @@ import java.util.*
 class UserServiceTest {
 
     private lateinit var userRepository: UserRepository
+    private lateinit var userGithubRepository: UserGithubRepository
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var userService: UserService
 
     @BeforeEach
     fun setUp() {
         userRepository = mockk()
+        userGithubRepository = mockk()
         passwordEncoder = mockk()
-        userService = UserService(passwordEncoder, userRepository)
+        userService = UserService(passwordEncoder, userRepository, userGithubRepository)
     }
 
     @Test
