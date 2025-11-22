@@ -437,7 +437,6 @@ class UserServiceTest {
         )
         val hashedPassword = "hashedPassword123"
 
-        coEvery { userRepository.existsByEmail(request.email) } returns false
         every { passwordEncoder.encode(request.password) } returns hashedPassword
         coEvery { userRepository.save(any()) } answers { firstArg() }
 
@@ -453,32 +452,8 @@ class UserServiceTest {
         result.description shouldBe request.description
         result.githubLink shouldBe request.githubLink
 
-        coVerify(exactly = 1) { userRepository.existsByEmail(request.email) }
         verify(exactly = 1) { passwordEncoder.encode(request.password) }
         coVerify(exactly = 1) { userRepository.save(any()) }
-    }
-
-    @Test
-    @DisplayName("createUser - 이미 존재하는 이메일일 때 DUPLICATE_EMAIL 예외를 던진다")
-    fun `given duplicate email, when createUser, then should throw DUPLICATE_EMAIL`() = runTest {
-        // given
-        val request = RegisterRequest(
-            email = "existing@example.com",
-            password = "password123",
-            name = "Test User"
-        )
-
-        coEvery { userRepository.existsByEmail(request.email) } returns true
-
-        // when & then
-        val exception = shouldThrow<BusinessException> {
-            userService.createUser(request)
-        }
-
-        exception.errorCode shouldBe ErrorCode.DUPLICATE_EMAIL
-        coVerify(exactly = 1) { userRepository.existsByEmail(request.email) }
-        verify(exactly = 0) { passwordEncoder.encode(any()) }
-        coVerify(exactly = 0) { userRepository.save(any()) }
     }
 
     @Test
@@ -495,7 +470,6 @@ class UserServiceTest {
         )
         val hashedPassword = "hashedPassword"
 
-        coEvery { userRepository.existsByEmail(request.email) } returns false
         every { passwordEncoder.encode(request.password) } returns hashedPassword
         coEvery { userRepository.save(any()) } answers { firstArg() }
 

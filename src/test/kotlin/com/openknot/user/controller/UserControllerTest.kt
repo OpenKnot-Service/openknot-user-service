@@ -183,7 +183,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("POST /register - 유효한 요청일 때 201 CREATED와 유저 정보를 반환한다")
+    @DisplayName("POST /create - 유효한 요청일 때 201 CREATED와 유저 정보를 반환한다")
     fun `given valid register request, when register user, then should return 201 with user info`() {
         // given
         val request = RegisterRequest(
@@ -211,7 +211,7 @@ class UserControllerTest {
 
         // when & then
         webTestClient.post()
-            .uri("/register")
+            .uri("/create")
             .bodyValue(request)
             .exchange()
             .expectStatus().isCreated
@@ -227,7 +227,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("POST /register - 이미 존재하는 이메일일 때 409 CONFLICT를 반환한다")
+    @DisplayName("POST /create - 이미 존재하는 이메일일 때 409 CONFLICT를 반환한다")
     fun `given duplicate email, when register user, then should return 409`() {
         // given
         val request = RegisterRequest(
@@ -240,7 +240,7 @@ class UserControllerTest {
 
         // when & then
         webTestClient.post()
-            .uri("/register")
+            .uri("/create")
             .bodyValue(request)
             .exchange()
             .expectStatus().isEqualTo(409)
@@ -251,7 +251,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("POST /register - 필수 필드가 없을 때 400 BAD_REQUEST를 반환한다")
+    @DisplayName("POST /create - 필수 필드가 없을 때 400 BAD_REQUEST를 반환한다")
     fun `given invalid request with missing fields, when register user, then should return 400`() {
         // given: email, password, name이 모두 필수
         val invalidRequest = mapOf(
@@ -261,7 +261,7 @@ class UserControllerTest {
 
         // when & then
         webTestClient.post()
-            .uri("/register")
+            .uri("/create")
             .bodyValue(invalidRequest)
             .exchange()
             .expectStatus().isBadRequest
@@ -270,7 +270,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("POST /register - 잘못된 이메일 형식일 때 400 BAD_REQUEST를 반환한다")
+    @DisplayName("POST /create - 잘못된 이메일 형식일 때 400 BAD_REQUEST를 반환한다")
     fun `given invalid email format, when register user, then should return 400`() {
         // given
         val invalidRequest = RegisterRequest(
@@ -281,7 +281,7 @@ class UserControllerTest {
 
         // when & then
         webTestClient.post()
-            .uri("/register")
+            .uri("/create")
             .bodyValue(invalidRequest)
             .exchange()
             .expectStatus().isBadRequest
