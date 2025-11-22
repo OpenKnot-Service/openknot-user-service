@@ -582,6 +582,114 @@ class UserControllerTest {
     }
 
     @Test
+    @DisplayName("PUT /{userId} - 이름이 빈 문자열일 때 400 BAD_REQUEST를 반환한다")
+    fun `given blank name, when updateUser endpoint called, then should return 400`() {
+        val userId = UUID.randomUUID()
+        val invalidRequest = UpdateUserRequest(name = "   ")
+
+        webTestClient.put()
+            .uri("/{userId}", userId)
+            .bodyValue(invalidRequest)
+            .exchange()
+            .expectStatus().isBadRequest
+
+        coVerify(exactly = 0) { userService.updateUser(any(), any()) }
+    }
+
+    @Test
+    @DisplayName("PUT /{userId} - 이름이 50자를 초과할 때 400 BAD_REQUEST를 반환한다")
+    fun `given name exceeding max length, when updateUser endpoint called, then should return 400`() {
+        val userId = UUID.randomUUID()
+        val longName = "a".repeat(51)
+        val invalidRequest = UpdateUserRequest(name = longName)
+
+        webTestClient.put()
+            .uri("/{userId}", userId)
+            .bodyValue(invalidRequest)
+            .exchange()
+            .expectStatus().isBadRequest
+
+        coVerify(exactly = 0) { userService.updateUser(any(), any()) }
+    }
+
+    @Test
+    @DisplayName("PUT /{userId} - 잘못된 URL 형식의 profileImageUrl일 때 400 BAD_REQUEST를 반환한다")
+    fun `given invalid profileImageUrl format, when updateUser endpoint called, then should return 400`() {
+        val userId = UUID.randomUUID()
+        val invalidRequest = UpdateUserRequest(profileImageUrl = "not-a-valid-url")
+
+        webTestClient.put()
+            .uri("/{userId}", userId)
+            .bodyValue(invalidRequest)
+            .exchange()
+            .expectStatus().isBadRequest
+
+        coVerify(exactly = 0) { userService.updateUser(any(), any()) }
+    }
+
+    @Test
+    @DisplayName("PUT /{userId} - 잘못된 URL 형식의 githubLink일 때 400 BAD_REQUEST를 반환한다")
+    fun `given invalid githubLink format, when updateUser endpoint called, then should return 400`() {
+        val userId = UUID.randomUUID()
+        val invalidRequest = UpdateUserRequest(githubLink = "invalid-github-link")
+
+        webTestClient.put()
+            .uri("/{userId}", userId)
+            .bodyValue(invalidRequest)
+            .exchange()
+            .expectStatus().isBadRequest
+
+        coVerify(exactly = 0) { userService.updateUser(any(), any()) }
+    }
+
+    @Test
+    @DisplayName("PUT /{userId} - 설명이 500자를 초과할 때 400 BAD_REQUEST를 반환한다")
+    fun `given description exceeding max length, when updateUser endpoint called, then should return 400`() {
+        val userId = UUID.randomUUID()
+        val longDescription = "a".repeat(501)
+        val invalidRequest = UpdateUserRequest(description = longDescription)
+
+        webTestClient.put()
+            .uri("/{userId}", userId)
+            .bodyValue(invalidRequest)
+            .exchange()
+            .expectStatus().isBadRequest
+
+        coVerify(exactly = 0) { userService.updateUser(any(), any()) }
+    }
+
+    @Test
+    @DisplayName("PUT /{userId} - 일부 필드만 업데이트할 때 200 OK를 반환한다")
+    fun `given partial update request, when updateUser endpoint called, then should return 200`() {
+        val userId = UUID.randomUUID()
+        val request = UpdateUserRequest(name = "Only Name Updated")
+        val updatedUser = User(
+            id = userId,
+            email = "test@example.com",
+            password = "password",
+            name = "Only Name Updated",
+            profileImageUrl = "https://old.com/image.png",
+            description = "old description",
+            githubLink = "https://github.com/old",
+            createdAt = LocalDateTime.now().minusDays(1),
+            modifiedAt = LocalDateTime.now(),
+        )
+
+        coEvery { userService.updateUser(userId, any()) } returns updatedUser
+
+        webTestClient.put()
+            .uri("/{userId}", userId)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.name").isEqualTo("Only Name Updated")
+            .jsonPath("$.profileImageUrl").isEqualTo("https://old.com/image.png")
+
+        coVerify(exactly = 1) { userService.updateUser(userId, any()) }
+    }
+
+    @Test
     @DisplayName("GET /search - 쿼리와 스킬 필터를 적용하여 페이지 데이터를 반환한다")
     fun `given query and skill filters, when searchUser endpoint called, then should return paged response`() {
         val pageable = PageRequest.of(1, 2)
