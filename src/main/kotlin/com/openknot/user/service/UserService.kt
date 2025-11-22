@@ -43,8 +43,6 @@ class UserService(
     suspend fun createUser(
         userData: RegisterRequest,
     ): User {
-        checkUserExists(userData.email)
-
         return userRepository.save(
             User(
                 id = UUIDv7.randomUUID(),

@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
@@ -35,8 +34,8 @@ class UserController(
         )
     }
 
-    @PostMapping("/register")
-    suspend fun registerUser(
+    @PostMapping("/create")
+    suspend fun createUser(
         @RequestBody @Valid request: RegisterRequest,
     ): ResponseEntity<UserInfoResponse> {
         return ResponseEntity
@@ -80,6 +79,15 @@ class UserController(
     ): ResponseEntity<Page<UserInfoResponse>> {
         return ResponseEntity.ok(
             userService.searchUserList(query, skills, pageable)
+        )
+    }
+
+    @GetMapping("/email-exists")
+    suspend fun existsUserByEmail(
+        @RequestParam(value = "email", required = true) email: String,
+    ): ResponseEntity<Boolean> {
+        return ResponseEntity.ok(
+            userService.existsUserByEmail(email)
         )
     }
 }
