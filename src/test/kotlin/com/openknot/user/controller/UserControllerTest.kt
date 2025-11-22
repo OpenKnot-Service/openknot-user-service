@@ -9,6 +9,7 @@ import com.openknot.user.entity.User
 import com.openknot.user.exception.BusinessException
 import com.openknot.user.exception.ErrorCode
 import com.openknot.user.repository.TechStackRepository
+import com.openknot.user.repository.UserGithubRepository
 import com.openknot.user.repository.UserRepository
 import com.openknot.user.repository.UserTechStackRepository
 import com.openknot.user.service.TechStackService
@@ -104,6 +105,9 @@ class UserControllerTest {
 
     @MockkBean(relaxUnitFun = true)
     private lateinit var userTechStackRepository: UserTechStackRepository
+
+    @MockkBean(relaxUnitFun = true)
+    private lateinit var userGithubRepository: UserGithubRepository
 
     @MockkBean(relaxUnitFun = true)
     private lateinit var techStackService: TechStackService

@@ -1,12 +1,14 @@
 package com.openknot.user.service
 
-import com.openknot.user.config.SecurityConfig
+import com.openknot.user.dto.GithubLinkRequest
 import com.openknot.user.dto.RegisterRequest
 import com.openknot.user.dto.UpdateUserRequest
 import com.openknot.user.dto.UserInfoResponse
 import com.openknot.user.entity.User
+import com.openknot.user.entity.UserGithub
 import com.openknot.user.exception.BusinessException
 import com.openknot.user.exception.ErrorCode
+import com.openknot.user.repository.UserGithubRepository
 import com.openknot.user.repository.UserRepository
 import com.openknot.user.utils.UUIDv7
 import kotlinx.coroutines.flow.toList
@@ -16,6 +18,7 @@ import org.springframework.data.domain.Pageable
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Transactional(readOnly = true)
@@ -23,6 +26,7 @@ import java.util.UUID
 class UserService(
     private val passwordEncoder: PasswordEncoder,
     private val userRepository: UserRepository,
+    private val userGithubRepository: UserGithubRepository,
 ) {
 
     @Transactional(readOnly = true)
@@ -98,6 +102,29 @@ class UserService(
             pageable,
             total
         )
+    }
+
+    @Transactional(readOnly = false)
+    suspend fun githubLink(
+        currentUserId: UUID,
+        githubLinkData: GithubLinkRequest,
+    ): UserGithub {
+        // 1. current User랑 동일한지 확인
+        if (currentUserId != githubLinkData.userId) throw BusinessException(ErrorCode.OAUTH_ACCOUNT_MISMATCH)
+        // 2. 이미 등록된 githubId인지 확인
+        if (userGithubRepository.existsByGithubId(githubLinkData.githubId)) throw BusinessException(ErrorCode.OAUTH_DUPLICATE_ACCOUNT)
+
+        // 3. 계정 연동 (본인계정에 다른 GitHub 계정이 등록되있으면 업데이트로 처리)
+        val userGithub = userGithubRepository.findByUserId(currentUserId)?.apply {
+            // 이미 연동을 했으나 다시 Link 하려는 경우
+            githubId = githubLinkData.githubId
+            githubUsername = githubLinkData.githubUsername
+            githubAccessToken = githubLinkData.githubAccessToken
+            avatarUrl = githubLinkData.avatarUrl
+            modifiedAt = LocalDateTime.now()
+        } ?: githubLinkData.toEntity()
+
+        return userGithubRepository.save(userGithub)
     }
 
     @Transactional(readOnly = true)

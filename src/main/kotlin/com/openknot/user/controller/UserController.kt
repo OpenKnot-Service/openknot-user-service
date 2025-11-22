@@ -1,6 +1,8 @@
 package com.openknot.user.controller
 
 import com.openknot.user.dto.CredentialValidationRequest
+import com.openknot.user.dto.GithubLinkRequest
+import com.openknot.user.dto.GithubLinkResponse
 import com.openknot.user.dto.RegisterRequest
 import com.openknot.user.dto.UpdateUserRequest
 import com.openknot.user.dto.UserIdResponse
@@ -88,6 +90,21 @@ class UserController(
     ): ResponseEntity<Boolean> {
         return ResponseEntity.ok(
             userService.existsUserByEmail(email)
+        )
+    }
+
+    @PostMapping("/github/link")
+    suspend fun githubLink(
+        @RequestHeader("X-User-Id") userId: UUID,
+        @RequestBody @Valid request: GithubLinkRequest,
+    ): ResponseEntity<GithubLinkResponse> {
+        return ResponseEntity.ok(
+            GithubLinkResponse.fromEntity(
+                userService.githubLink(
+                    userId,
+                    request
+                )
+            )
         )
     }
 }
