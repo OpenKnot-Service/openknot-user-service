@@ -9,4 +9,5 @@ import java.util.UUID
 interface UserGithubRepository : CoroutineCrudRepository<UserGithub, UUID> {
     suspend fun existsByGithubId(githubId: Long): Boolean
     suspend fun findByUserId(userId: UUID): UserGithub?
+    suspend fun findByGithubId(githubId: Long): UserGithub?
 }

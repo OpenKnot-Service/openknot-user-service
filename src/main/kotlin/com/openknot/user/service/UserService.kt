@@ -111,8 +111,12 @@ class UserService(
     ): UserGithub {
         // 1. current User랑 동일한지 확인
         if (currentUserId != githubLinkData.userId) throw BusinessException(ErrorCode.OAUTH_ACCOUNT_MISMATCH)
-        // 2. 이미 등록된 githubId인지 확인
-        if (userGithubRepository.existsByGithubId(githubLinkData.githubId)) throw BusinessException(ErrorCode.OAUTH_DUPLICATE_ACCOUNT)
+
+        // 2. 이미 다른 사용자가 등록한 githubId인지 확인 (본인이 이미 연동한 경우는 제외)
+        val existingGithubLink = userGithubRepository.findByGithubId(githubLinkData.githubId)
+        if (existingGithubLink != null && existingGithubLink.userId != currentUserId) {
+            throw BusinessException(ErrorCode.OAUTH_DUPLICATE_ACCOUNT)
+        }
 
         // 3. 계정 연동 (본인계정에 다른 GitHub 계정이 등록되있으면 업데이트로 처리)
         val userGithub = userGithubRepository.findByUserId(currentUserId)?.apply {

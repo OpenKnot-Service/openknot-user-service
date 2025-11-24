@@ -1,8 +1,10 @@
 package com.openknot.user.service
 
+import com.openknot.user.dto.GithubLinkRequest
 import com.openknot.user.dto.RegisterRequest
 import com.openknot.user.dto.UpdateUserRequest
 import com.openknot.user.entity.User
+import com.openknot.user.entity.UserGithub
 import com.openknot.user.exception.BusinessException
 import com.openknot.user.exception.ErrorCode
 import com.openknot.user.repository.UserGithubRepository
@@ -518,5 +520,178 @@ class UserServiceTest {
         // then
         exists shouldBe false
         coVerify(exactly = 1) { userRepository.existsByEmail(email) }
+    }
+
+    @Test
+    @DisplayName("githubLink - 본인이 처음 연동할 때 새로운 UserGithub을 생성한다")
+    fun `given new github link request, when githubLink, then should create new UserGithub`() = runTest {
+        // given
+        val userId = UUID.randomUUID()
+        val githubId = 12345L
+        val request = GithubLinkRequest(
+            userId = userId,
+            githubId = githubId,
+            githubUsername = "testuser",
+            githubAccessToken = "github_token_123",
+            avatarUrl = "https://github.com/avatar.jpg"
+        )
+
+        coEvery { userGithubRepository.findByGithubId(githubId) } returns null
+        coEvery { userGithubRepository.findByUserId(userId) } returns null
+        coEvery { userGithubRepository.save(any()) } answers { firstArg() }
+
+        // when
+        val result = userService.githubLink(userId, request)
+
+        // then
+        result shouldNotBe null
+        result.userId shouldBe userId
+        result.githubId shouldBe githubId
+        result.githubUsername shouldBe "testuser"
+        coVerify(exactly = 1) { userGithubRepository.findByGithubId(githubId) }
+        coVerify(exactly = 1) { userGithubRepository.findByUserId(userId) }
+        coVerify(exactly = 1) { userGithubRepository.save(any()) }
+    }
+
+    @Test
+    @DisplayName("githubLink - 본인이 이미 연동한 같은 GitHub 계정을 다시 연동할 때 업데이트한다")
+    fun `given same github account re-link by owner, when githubLink, then should update existing UserGithub`() = runTest {
+        // given
+        val userId = UUID.randomUUID()
+        val githubId = 12345L
+        val existingUserGithub = UserGithub(
+            id = UUID.randomUUID(),
+            userId = userId,
+            githubId = githubId,
+            githubUsername = "oldusername",
+            githubAccessToken = "old_token",
+            avatarUrl = "https://old.avatar.jpg",
+            createdAt = LocalDateTime.now().minusDays(1)
+        )
+        val request = GithubLinkRequest(
+            userId = userId,
+            githubId = githubId,
+            githubUsername = "newusername",
+            githubAccessToken = "new_token",
+            avatarUrl = "https://new.avatar.jpg"
+        )
+
+        coEvery { userGithubRepository.findByGithubId(githubId) } returns existingUserGithub
+        coEvery { userGithubRepository.findByUserId(userId) } returns existingUserGithub
+        coEvery { userGithubRepository.save(any()) } answers { firstArg() }
+
+        // when
+        val result = userService.githubLink(userId, request)
+
+        // then
+        result shouldNotBe null
+        result.userId shouldBe userId
+        result.githubId shouldBe githubId
+        result.githubUsername shouldBe "newusername"
+        result.githubAccessToken shouldBe "new_token"
+        result.avatarUrl shouldBe "https://new.avatar.jpg"
+        coVerify(exactly = 1) { userGithubRepository.findByGithubId(githubId) }
+        coVerify(exactly = 1) { userGithubRepository.save(any()) }
+    }
+
+    @Test
+    @DisplayName("githubLink - 본인이 다른 GitHub 계정으로 재연동할 때 업데이트한다")
+    fun `given different github account by owner, when githubLink, then should update existing UserGithub`() = runTest {
+        // given
+        val userId = UUID.randomUUID()
+        val oldGithubId = 12345L
+        val newGithubId = 67890L
+        val existingUserGithub = UserGithub(
+            id = UUID.randomUUID(),
+            userId = userId,
+            githubId = oldGithubId,
+            githubUsername = "olduser",
+            githubAccessToken = "old_token",
+            avatarUrl = null,
+            createdAt = LocalDateTime.now().minusDays(1)
+        )
+        val request = GithubLinkRequest(
+            userId = userId,
+            githubId = newGithubId,
+            githubUsername = "newuser",
+            githubAccessToken = "new_token",
+            avatarUrl = "https://new.avatar.jpg"
+        )
+
+        coEvery { userGithubRepository.findByGithubId(newGithubId) } returns null
+        coEvery { userGithubRepository.findByUserId(userId) } returns existingUserGithub
+        coEvery { userGithubRepository.save(any()) } answers { firstArg() }
+
+        // when
+        val result = userService.githubLink(userId, request)
+
+        // then
+        result shouldNotBe null
+        result.userId shouldBe userId
+        result.githubId shouldBe newGithubId
+        result.githubUsername shouldBe "newuser"
+        coVerify(exactly = 1) { userGithubRepository.findByGithubId(newGithubId) }
+        coVerify(exactly = 1) { userGithubRepository.findByUserId(userId) }
+        coVerify(exactly = 1) { userGithubRepository.save(any()) }
+    }
+
+    @Test
+    @DisplayName("githubLink - 다른 사용자가 이미 연동한 GitHub 계정을 연동하려고 할 때 OAUTH_DUPLICATE_ACCOUNT 예외를 던진다")
+    fun `given github account already linked by another user, when githubLink, then should throw OAUTH_DUPLICATE_ACCOUNT`() = runTest {
+        // given
+        val currentUserId = UUID.randomUUID()
+        val anotherUserId = UUID.randomUUID()
+        val githubId = 12345L
+        val existingUserGithub = UserGithub(
+            id = UUID.randomUUID(),
+            userId = anotherUserId,
+            githubId = githubId,
+            githubUsername = "anotheruser",
+            githubAccessToken = "another_token",
+            avatarUrl = null,
+            createdAt = LocalDateTime.now().minusDays(1)
+        )
+        val request = GithubLinkRequest(
+            userId = currentUserId,
+            githubId = githubId,
+            githubUsername = "testuser",
+            githubAccessToken = "test_token",
+            avatarUrl = null
+        )
+
+        coEvery { userGithubRepository.findByGithubId(githubId) } returns existingUserGithub
+
+        // when & then
+        val exception = shouldThrow<BusinessException> {
+            userService.githubLink(currentUserId, request)
+        }
+
+        exception.errorCode shouldBe ErrorCode.OAUTH_DUPLICATE_ACCOUNT
+        coVerify(exactly = 1) { userGithubRepository.findByGithubId(githubId) }
+        coVerify(exactly = 0) { userGithubRepository.save(any()) }
+    }
+
+    @Test
+    @DisplayName("githubLink - userId 불일치 시 OAUTH_ACCOUNT_MISMATCH 예외를 던진다")
+    fun `given mismatched userId, when githubLink, then should throw OAUTH_ACCOUNT_MISMATCH`() = runTest {
+        // given
+        val currentUserId = UUID.randomUUID()
+        val requestUserId = UUID.randomUUID()
+        val request = GithubLinkRequest(
+            userId = requestUserId,
+            githubId = 12345L,
+            githubUsername = "testuser",
+            githubAccessToken = "test_token",
+            avatarUrl = null
+        )
+
+        // when & then
+        val exception = shouldThrow<BusinessException> {
+            userService.githubLink(currentUserId, request)
+        }
+
+        exception.errorCode shouldBe ErrorCode.OAUTH_ACCOUNT_MISMATCH
+        coVerify(exactly = 0) { userGithubRepository.findByGithubId(any()) }
+        coVerify(exactly = 0) { userGithubRepository.save(any()) }
     }
 }
