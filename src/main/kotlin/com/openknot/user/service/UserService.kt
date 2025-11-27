@@ -73,6 +73,9 @@ class UserService(
         val user = getUser(userId)
         user.update(
             name = request.name,
+            position = request.position,
+            detailedPosition = request.detailedPosition,
+            careerLevel = request.careerLevel,
             profileImageUrl = request.profileImageUrl,
             description = request.description,
             githubLink = request.githubLink,

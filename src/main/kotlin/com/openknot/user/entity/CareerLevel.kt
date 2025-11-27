@@ -10,6 +10,6 @@ enum class CareerLevel(
 
     companion object {
         fun fromLabel(label: String): CareerLevel? =
-            CareerLevel.entries.firstOrNull { it.label == label }
+            CareerLevel.entries.firstOrNull { it.name == label || it.label == label }
     }
 }

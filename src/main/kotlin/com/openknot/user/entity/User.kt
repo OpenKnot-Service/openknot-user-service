@@ -44,12 +44,12 @@ class User(
     ) {
         name?.let { this.name = it }
         position?.let {
-            this.position = Position.fromLabel(it)
+            this.position = Position.fromLabel(it.uppercase())
                 ?: throw BusinessException(ErrorCode.VALIDATION_FAIL)
         }
         detailedPosition?.let { this.detailedPosition = it }
         careerLevel?.let {
-            this.careerLevel = CareerLevel.fromLabel(it)
+            this.careerLevel = CareerLevel.fromLabel(it.uppercase())
                 ?: throw BusinessException(ErrorCode.VALIDATION_FAIL)
         }
         profileImageUrl?.let { this.profileImageUrl = it }

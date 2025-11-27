@@ -10,6 +10,6 @@ enum class Position(
 
     companion object {
         fun fromLabel(label: String): Position? =
-            Position.entries.firstOrNull { it.label == label }
+            Position.entries.firstOrNull { it.name == label || it.label == label }
     }
 }
