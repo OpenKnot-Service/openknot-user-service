@@ -527,7 +527,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /{userId} - 요청된 필드를 업데이트하고 응답을 반환한다")
+    @DisplayName("PUT / - 요청된 필드를 업데이트하고 응답을 반환한다")
     fun `given update request, when updateUser endpoint called, then should return updated payload`() {
         val userId = UUID.randomUUID()
         val request = UpdateUserRequest(
@@ -551,7 +551,8 @@ class UserControllerTest {
         coEvery { userService.updateUser(userId, capture(requestSlot)) } returns updatedUser
 
         webTestClient.put()
-            .uri("/{userId}", userId)
+            .uri("/")
+            .header("X-User-Id", userId.toString())
             .bodyValue(request)
             .exchange()
             .expectStatus().isOk
@@ -569,13 +570,14 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /{userId} - 대상 유저가 없으면 404를 반환한다")
+    @DisplayName("PUT / - 대상 유저가 없으면 404를 반환한다")
     fun `given non existing user id, when updateUser endpoint called, then should return 404`() {
         val userId = UUID.randomUUID()
         coEvery { userService.updateUser(userId, any()) } throws BusinessException(ErrorCode.USER_NOT_FOUND)
 
         webTestClient.put()
-            .uri("/{userId}", userId)
+            .uri("/")
+            .header("X-User-Id", userId.toString())
             .bodyValue(UpdateUserRequest(name = "fail"))
             .exchange()
             .expectStatus().isNotFound
@@ -586,13 +588,14 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /{userId} - 이름이 빈 문자열일 때 400 BAD_REQUEST를 반환한다")
+    @DisplayName("PUT / - 이름이 빈 문자열일 때 400 BAD_REQUEST를 반환한다")
     fun `given blank name, when updateUser endpoint called, then should return 400`() {
         val userId = UUID.randomUUID()
         val invalidRequest = UpdateUserRequest(name = "   ")
 
         webTestClient.put()
-            .uri("/{userId}", userId)
+            .uri("/")
+            .header("X-User-Id", userId.toString())
             .bodyValue(invalidRequest)
             .exchange()
             .expectStatus().isBadRequest
@@ -601,14 +604,15 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /{userId} - 이름이 50자를 초과할 때 400 BAD_REQUEST를 반환한다")
+    @DisplayName("PUT / - 이름이 50자를 초과할 때 400 BAD_REQUEST를 반환한다")
     fun `given name exceeding max length, when updateUser endpoint called, then should return 400`() {
         val userId = UUID.randomUUID()
         val longName = "a".repeat(51)
         val invalidRequest = UpdateUserRequest(name = longName)
 
         webTestClient.put()
-            .uri("/{userId}", userId)
+            .uri("/")
+            .header("X-User-Id", userId.toString())
             .bodyValue(invalidRequest)
             .exchange()
             .expectStatus().isBadRequest
@@ -617,13 +621,14 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /{userId} - 잘못된 URL 형식의 profileImageUrl일 때 400 BAD_REQUEST를 반환한다")
+    @DisplayName("PUT / - 잘못된 URL 형식의 profileImageUrl일 때 400 BAD_REQUEST를 반환한다")
     fun `given invalid profileImageUrl format, when updateUser endpoint called, then should return 400`() {
         val userId = UUID.randomUUID()
         val invalidRequest = UpdateUserRequest(profileImageUrl = "not-a-valid-url")
 
         webTestClient.put()
-            .uri("/{userId}", userId)
+            .uri("/")
+            .header("X-User-Id", userId.toString())
             .bodyValue(invalidRequest)
             .exchange()
             .expectStatus().isBadRequest
@@ -632,13 +637,14 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /{userId} - 잘못된 URL 형식의 githubLink일 때 400 BAD_REQUEST를 반환한다")
+    @DisplayName("PUT / - 잘못된 URL 형식의 githubLink일 때 400 BAD_REQUEST를 반환한다")
     fun `given invalid githubLink format, when updateUser endpoint called, then should return 400`() {
         val userId = UUID.randomUUID()
         val invalidRequest = UpdateUserRequest(githubLink = "invalid-github-link")
 
         webTestClient.put()
-            .uri("/{userId}", userId)
+            .uri("/")
+            .header("X-User-Id", userId.toString())
             .bodyValue(invalidRequest)
             .exchange()
             .expectStatus().isBadRequest
@@ -647,14 +653,15 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /{userId} - 설명이 500자를 초과할 때 400 BAD_REQUEST를 반환한다")
+    @DisplayName("PUT / - 설명이 500자를 초과할 때 400 BAD_REQUEST를 반환한다")
     fun `given description exceeding max length, when updateUser endpoint called, then should return 400`() {
         val userId = UUID.randomUUID()
         val longDescription = "a".repeat(501)
         val invalidRequest = UpdateUserRequest(description = longDescription)
 
         webTestClient.put()
-            .uri("/{userId}", userId)
+            .uri("/")
+            .header("X-User-Id", userId.toString())
             .bodyValue(invalidRequest)
             .exchange()
             .expectStatus().isBadRequest
@@ -663,7 +670,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /{userId} - 일부 필드만 업데이트할 때 200 OK를 반환한다")
+    @DisplayName("PUT / - 일부 필드만 업데이트할 때 200 OK를 반환한다")
     fun `given partial update request, when updateUser endpoint called, then should return 200`() {
         val userId = UUID.randomUUID()
         val request = UpdateUserRequest(name = "Only Name Updated")
@@ -682,7 +689,8 @@ class UserControllerTest {
         coEvery { userService.updateUser(userId, any()) } returns updatedUser
 
         webTestClient.put()
-            .uri("/{userId}", userId)
+            .uri("/")
+            .header("X-User-Id", userId.toString())
             .bodyValue(request)
             .exchange()
             .expectStatus().isOk
