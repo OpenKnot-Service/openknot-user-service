@@ -63,9 +63,9 @@ class UserController(
         )
     }
 
-    @PutMapping("/{userId}")
+    @PutMapping
     suspend fun updateUser(
-        @PathVariable userId: UUID,
+        @RequestHeader("X-User-Id") userId: UUID,
         @RequestBody @Valid request: UpdateUserRequest,
     ): ResponseEntity<UserInfoResponse> {
         return ResponseEntity.ok(
