@@ -1,5 +1,7 @@
 package com.openknot.user.entity
 
+import com.openknot.user.exception.BusinessException
+import com.openknot.user.exception.ErrorCode
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.LastModifiedDate
@@ -15,6 +17,12 @@ class User(
     var email: String,
     var password: String,
     var name: String,
+
+    var position: Position? = null,
+    var detailedPosition: String? = null,
+
+    var careerLevel: CareerLevel? = null,
+
     var profileImageUrl: String? = null,
     var description: String? = null,
     var githubLink: String? = null,
@@ -27,11 +35,23 @@ class User(
 ) : Persistable<UUID> {
     fun update(
         name: String? = null,
+        position: String? = null,
+        detailedPosition: String? = null,
+        careerLevel: String? = null,
         profileImageUrl: String? = null,
         description: String? = null,
         githubLink: String? = null,
     ) {
         name?.let { this.name = it }
+        position?.let {
+            this.position = Position.fromLabel(it)
+                ?: throw BusinessException(ErrorCode.VALIDATION_FAIL)
+        }
+        detailedPosition?.let { this.detailedPosition = it }
+        careerLevel?.let {
+            this.careerLevel = CareerLevel.fromLabel(it)
+                ?: throw BusinessException(ErrorCode.VALIDATION_FAIL)
+        }
         profileImageUrl?.let { this.profileImageUrl = it }
         description?.let { this.description = it }
         githubLink?.let { this.githubLink = it }
